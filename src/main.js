@@ -1,86 +1,158 @@
-var renderer, stage;
+var container, renderer, stage;
+var emitter;
 
+var images = ["images/smokeparticle.png", "images/HardRain.png", "images/Fire.png"];
 
-var mouseX = 0,
-    mouseY = 0;
-var windowHalfX = window.innerWidth / 2;
-var windowHalfY = window.innerHeight / 2;
-
-var maggots = [];
+var config = {
+    "alpha": {
+        "start": 1,
+        "end": 0.04
+    },
+    "scale": {
+        "start": 0.1,
+        "end": 0.4,
+        "minimumScaleMultiplier": 1
+    },
+    "color": {
+        "start": "#ffffff",
+        "end": "#007cf0"
+    },
+    "speed": {
+        "start": 60,
+        "end": 200,
+        "minimumSpeedMultiplier": 1
+    },
+    "acceleration": {
+        "x": 0,
+        "y": 0
+    },
+    "maxSpeed": 0,
+    "startRotation": {
+        "min": 0,
+        "max": 90
+    },
+    "noRotation": false,
+    "rotationSpeed": {
+        "min": 10,
+        "max": 60
+    },
+    "lifetime": {
+        "min": 2,
+        "max": 6
+    },
+    "blendMode": "normal",
+    "frequency": 0.001,
+    "emitterLifetime": -1,
+    "maxParticles": 5000,
+    "pos": {
+        "x": 0,
+        "y": 0
+    },
+    "addAtBack": true,
+    "spawnType": "point"
+}
 
 init();
 
-
 function init() {
-    renderer = PIXI.autoDetectRenderer(800, 600);
-    document.body.appendChild(renderer.view);
+    container = document.getElementById('canvasBox')
 
-    // create the root of the scene graph
+    //renderer
+    renderer = PIXI.autoDetectRenderer(600, 800);
+    container.appendChild(renderer.view);
+
+    //stage
     stage = new PIXI.Container();
 
-    var sprites = new PIXI.particles.ParticleContainer(10000, {
-        scale: true,
-        position: true,
-        rotation: true,
-        uvs: true,
-        alpha: true
-    });
-    stage.addChild(sprites);
 
-
-
-    var totalSprites = renderer instanceof PIXI.WebGLRenderer ? 1000 : 100;
-
-    for (var i = 0; i < totalSprites; i++) {
-        // create a new Sprite
-        var dude = PIXI.Sprite.fromImage('assets/dot.png');
-
-        dude.tint = Math.random() * 0xE8D4CD;
-
-        // set the anchor point so the texture is centerd on the sprite
-        dude.anchor.set(0.5);
-
-        // different maggots, different sizes
-        dude.scale.set(0.8 + Math.random() * 0.3);
-
-        // scatter them all
-        dude.x = Math.random() * renderer.width;
-        dude.y = Math.random() * renderer.height;
-
-        dude.tint = Math.random() * 0x808080;
-
-        // create a random direction in radians
-        dude.direction = Math.random() * Math.PI * 2;
-
-        // this number will be used to modify the direction of the sprite over time
-        dude.turningSpeed = Math.random() - 0.8;
-
-        // create a random speed between 0 - 2, and these maggots are slooww
-        dude.speed = (2 + Math.random() * 2) * 0.2;
-
-        dude.offset = Math.random() * 100;
-
-        // finally we push the dude into the maggots array so it it can be easily accessed later
-        maggots.push(dude);
-
-        sprites.addChild(dude);
+    //load particle images
+    var loader = PIXI.loader;
+    for (i in images) {
+        loader.add("img" + i, images[i]);
     }
+
+    //particles
+    loader.load(function() {
+        var Textures = [];
+        for (i in images) {
+            Textures.push(PIXI.Texture.fromImage(images[i]));
+        }
+        //////
+        initEmitter(Textures);
+    });
+
+    // STATS
+    stats = new Stats();
+    container.appendChild(stats.dom);
+
+    //Events
+    stage.interactive = true;
+    stage
+        .on('mousemove', onDragMove)
+        .on('touchmove', onDragMove);
 }
 
-animate();
 
-function animate() {
+function initEmitter(Textures) {
 
-    // iterate through the sprites and update their position
-    for (var i = 0; i < maggots.length; i++) {
-        var dude = maggots[i];
-        dude.direction += dude.turningSpeed * 0.01;
-        dude.position.x += Math.sin(dude.direction) * (dude.speed * dude.scale.y);
-        dude.position.y += Math.cos(dude.direction) * (dude.speed * dude.scale.y);
-        dude.rotation = -dude.direction + Math.PI;
+    //if useParticleContainer the particle image must be onlay one
+    var useParticleContainer = true;
+    if (Textures.length > 1) useParticleContainer = false;
+
+    var emitterContainer;
+    if (useParticleContainer) {
+        emitterContainer = new PIXI.particles.ParticleContainer()
+        emitterContainer.setProperties({
+            scale: true,
+            position: true,
+            rotation: true,
+            uvs: true,
+            alpha: true
+        });
+    } else {
+        emitterContainer = new PIXI.Container();
     }
+    stage.addChild(emitterContainer);
 
+    // Create a new emitter
+    emitter = new PIXI.particles.Emitter(
+        emitterContainer,
+        Textures,
+        config
+    );
+
+    // Start emitting
+    emitter.updateOwnerPos(window.innerWidth / 2, window.innerHeight / 2);
+    // emitter.emit = true;
+}
+
+
+
+function onDragMove(e) {
+    var p = e.data.global;
+
+    if (!emitter) return;
+    emitter.emit = true;
+    emitter.resetPositionTracking();
+
+    emitter.updateOwnerPos(p.x, p.y);
+}
+
+
+
+var elapsed = Date.now();
+
+function update() {
+    requestAnimationFrame(update);
+
+    var now = Date.now();
+    if (emitter)
+        emitter.update((now - elapsed) * 0.001);
+    elapsed = now;
 
     renderer.render(stage);
-    requestAnimationFrame(animate);
+    stats.update();
 }
+
+
+update();
