@@ -1,5 +1,6 @@
 var container, renderer, stage;
 var emitter;
+var FPS=30;
 
 var images = ["images/smokeparticle.png", "images/HardRain.png", "images/Fire.png"];
 
@@ -43,7 +44,7 @@ var config = {
     "blendMode": "normal",
     "frequency": 0.001,
     "emitterLifetime": -1,
-    "maxParticles": 5000,
+    "maxParticles": 500,
     "pos": {
         "x": 0,
         "y": 0
@@ -143,7 +144,8 @@ function onDragMove(e) {
 var elapsed = Date.now();
 
 function update() {
-    requestAnimationFrame(update);
+    // requestAnimationFrame(update);
+    window.setTimeout(update, 1000 / FPS);
 
     var now = Date.now();
     if (emitter)
@@ -153,6 +155,8 @@ function update() {
     renderer.render(stage);
     stats.update();
 }
+
+
 
 
 update();
