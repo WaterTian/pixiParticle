@@ -4,7 +4,8 @@ var FPS=30;
 
 var images = ["images/smokeparticle.png", "images/HardRain.png", "images/Fire.png"];
 
-var config = {
+var config = 
+{
     "alpha": {
         "start": 1,
         "end": 0.04
